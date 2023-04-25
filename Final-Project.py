@@ -3,9 +3,10 @@ import pandas as pd
 import re
 import matplotlib as plt
 from datetime import datetime
+import scipy
 
 # %%
-olypmic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_id")
+olympic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_id")
 # %%
 # create a new dataframe that contains only the entries that have date in yyyy-mm-dd format in the born column
 
@@ -13,7 +14,7 @@ olypmic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_
 regex_pattern = "\d{4}-\d{2}-\d{2}"
 
 # # create a boolean mask to select rows where 'born' matches the pattern
-mask = olypmic_df["born"].apply(lambda x: bool(re.match(regex_pattern, x)))
+mask = olympic_df["born"].apply(lambda x: bool(re.match(regex_pattern, x)))
 
 # # create a new DataFrame with only the rows where 'born' matches the pattern
 clean_df = olympic_df[mask]
@@ -48,23 +49,40 @@ def days_since_sep1(date):
 # %%
 
 clean_1994_df["days_since_sep1"] = clean_1994_df["born"].apply(days_since_sep1)
-clean_1994_df["birthyear"] = clean_1994_df["born"].dt.year
-
-clean_1994_df["yyyy-mm-dd"]
+clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
 # %%
 
-# group the entries by birth year and days since September 1st and count the number of entries in each group
+# group the entries by birth date and days since September 1st and count the number of entries in each group
 counts_df = (
-    clean_1994_df.groupby(["birthyear", "days_since_sep1"])["born"]
+    clean_1994_df.groupby(["yyyy-mm-dd", "days_since_sep1"])["athletes_born"]
     .count()
     .reset_index()
 )
 # %%
+counts_df["year"] = pd.to_datetime(counts_df["yyyy-mm-dd"].dt.year)
+yearly_sum = counts_df.groupby("year")["born"].sum()
+counts_df["born_normalized"] = counts_df["born"] / counts_df["year"].map(yearly_sum)
+# %%
 births_df = pd.read_csv("Datasets/US_births_1994-2014.csv")
 births_df["births_by_year"] = births_df.groupby(["year"])["births"].transform("sum")
-births_df["density"] = births_df["births"] / births_df["births_by_year"]
+births_df["births_density"] = births_df["births"] / births_df["births_by_year"]
+births_df["yyyy-mm-dd"] = (
+    births_df["year"].astype(str)
+    + "-"
+    + births_df["month"].astype(str).str.zfill(2)
+    + "-"
+    + births_df["date_of_month"].astype(str).str.zfill(2)
+)
+births_df["yyyy-mm-dd"] = pd.to_datetime(births_df["yyyy-mm-dd"])
 # %%
-counts_df
+counts_births_df = pd.merge(counts_df, births_df, on="yyyy-mm-dd", how="inner")
+
 # %%
-births_df
+counts_births_df["normalized_athletes_born"] = counts_births_df["born"]
+# %%
+scipy.stats.kstest(
+    counts_births_df["born_normalized"], counts_births_df["births_density"]
+)
+# %%
+counts_births_df
 # %%
