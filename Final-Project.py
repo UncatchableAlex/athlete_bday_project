@@ -1,7 +1,7 @@
 # %%
 import pandas as pd
 import re
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from datetime import datetime
 import scipy
 
@@ -47,6 +47,8 @@ def days_since_sep1(date):
 
 
 # %%
+clean_1994_df
+# %%
 
 clean_1994_df["days_since_sep1"] = clean_1994_df["born"].apply(days_since_sep1)
 clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
@@ -54,7 +56,7 @@ clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
 
 # group the entries by birth date and days since September 1st and count the number of entries in each group
 counts_df = (
-    clean_1994_df.groupby(["yyyy-mm-dd", "days_since_sep1"])["athletes_born"]
+    clean_1994_df.groupby(["yyyy-mm-dd", "days_since_sep1"])["born"]
     .count()
     .reset_index()
 )
@@ -85,4 +87,87 @@ scipy.stats.kstest(
 )
 # %%
 counts_births_df
+# %%
+year_groups = counts_births_df.groupby("year_y")
+year_lists = [group.values.tolist() for year, group in year_groups]
+# %%
+# Create an empty DataFrame to store the averages
+averages_df = pd.DataFrame(
+    columns=["days_since_sep1", "born_normalized_mean", "births_density_mean"]
+)
+
+# Group the rows based on the value in the "days_since_sep1" column
+day_groups = counts_births_df.groupby("days_since_sep1")
+
+# Iterate through each group
+for day, group in day_groups:
+    # Calculate the mean of the "born_normalized" and "births_density" columns
+    born_normalized_mean = group["born_normalized"].mean()
+    births_density_mean = group["births_density"].mean()
+
+    # Add a new row to the "averages_df" DataFrame with the day and the calculated means
+    new_row = {
+        "days_since_sep1": day,
+        "born_normalized_mean": born_normalized_mean,
+        "births_density_mean": births_density_mean,
+    }
+    averages_df = pd.concat([averages_df, pd.DataFrame([new_row])])
+# %%
+# Calculate the first and third quartiles of the 'born_normalized_mean' column
+q1 = averages_df["born_normalized_mean"].quantile(0.25)
+q3 = averages_df["born_normalized_mean"].quantile(0.75)
+
+# Calculate the interquartile range (IQR)
+iqr = q3 - q1
+
+# Define the upper and lower bounds for outliers
+upper_bound = q3 + 1.5 * iqr
+lower_bound = q1 - 1.5 * iqr
+
+# Filter the dataframe to remove extreme outliers
+averages_df = averages_df[
+    (averages_df["born_normalized_mean"] >= lower_bound)
+    & (averages_df["born_normalized_mean"] <= upper_bound)
+]
+# %%
+# # Set the 'days_since_sep1' column as the index of the dataframe
+# averages_df.set_index('days_since_sep1', inplace=True)
+# #%%
+# # Reset the index to make 'days_since_sep1' a column again
+# averages_df.reset_index(inplace=True)
+# %%
+# # Drop the "days_since_sep1" column
+# averages_df.drop("days_since_sep1", axis=1, inplace=True)
+
+# # Group the rows into sets of 30 based on 'days_since_sep1' and calculate the mean of the remaining columns in each group
+# averages_df = averages_df.groupby(averages_df.index // 30 * 30).mean()
+
+# # Reset the index to make the index a column again
+# averages_df.reset_index(inplace=True)
+
+# # Rename the new column to 'days_since_sep1_30'
+# averages_df.rename(columns={'index': 'days_since_sep1_30'}, inplace=True)
+
+# %%
+averages_df
+# %%
+# Create a line plot with "days_since_sep1" as the x variable and "born_normalized_mean" and "births_density_mean" as two separate lines
+plt.plot(
+    averages_df["days_since_sep1"],
+    averages_df["born_normalized_mean"],
+    label="Professional Athletes",
+)
+plt.plot(
+    averages_df["days_since_sep1"],
+    averages_df["births_density_mean"],
+    label="Total Population",
+)
+
+# Add axis labels and a legend
+plt.xlabel("Days Since September 1")
+plt.ylabel("Percentage of Population Born")
+plt.legend()
+
+# Show the plot
+plt.show()
 # %%
