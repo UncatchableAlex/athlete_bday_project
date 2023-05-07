@@ -26,7 +26,7 @@ def clean_data(df):
     # create a new dataframe that contains only the entries that are older than September 1st 1994 (This is where our birth data begins)
 
     # # convert the born column into a datetime object
-    clean_df["born"] = pd.to_datetime(clean_df["born"])
+    clean_df.loc[:, "born"] = pd.to_datetime(clean_df["born"])
 
     # # create a datetime object for September 1st, 1994
     sep_1_1994 = datetime(1994, 9, 1)
@@ -83,25 +83,21 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
     births_df = births_df.loc[~mask]
 
     # Calculate the days_since_sep1 for each date
-    births_df["days_since_sep1"] = births_df["yyyy-mm-dd"].apply(days_since_sep1)
+    births_df.loc[:, "days_since_sep1"] = births_df["yyyy-mm-dd"].apply(days_since_sep1)
 
     # Add a "yyyy-mm-dd" column to the athletes table
     clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
 
     # group the entries by birth date and days since September 1st and count the number of entries in each group
-    counts_df = (
-        clean_1994_df.groupby(["yyyy-mm-dd"])["born"]
-        .count()
-        .reset_index()
-    )
-    
+    counts_df = clean_1994_df.groupby(["yyyy-mm-dd"])["born"].count().reset_index()
+
     # Compute normalized the athlete born data based on the corresponding yearly sum
     counts_df["year"] = pd.to_datetime(counts_df["yyyy-mm-dd"].dt.year)
     yearly_sum = counts_df.groupby("year")["born"].sum()
     counts_df["born_normalized"] = counts_df["born"] / counts_df["year"].map(yearly_sum)
 
     # Join the counts_df and the births_df to create the
-    counts_births_df = pd.merge(births_df, counts_df, on="yyyy-mm-dd", how="left")  
+    counts_births_df = pd.merge(births_df, counts_df, on="yyyy-mm-dd", how="left")
     counts_births_df["born"] = counts_births_df["born"].fillna(0)
     counts_births_df["born_normalized"] = counts_births_df["born_normalized"].fillna(0)
 
@@ -162,7 +158,7 @@ def create_graphs(df):
     averages_df.reset_index(inplace=True)
 
     # Group the rows into sets of 30 based on 'days_since_sep1' and calculate the mean of the remaining columns in each group
-    averages_df = averages_df.groupby(df.index // 30 * 30).mean()
+    averages_df = averages_df.groupby(averages_df.index // 30 * 30).mean()
 
     # Reset the index to make the index a column again
     averages_df.reset_index(inplace=True)
@@ -203,12 +199,13 @@ def create_graphs(df):
     )
 
     # Add axis labels and a legend
-    plt.xlabel("Days Since September 1")
+    plt.xlabel("Days Since September 1 (30 Day Intervals)")
     plt.ylabel("Percentage of Population Born")
     plt.legend()
 
     # Show the plot
     plt.show()
+
 
 # %%
 clean_df = clean_data(olympic_df)
@@ -220,5 +217,3 @@ create_graphs(averages_df)
 scipy.stats.kstest(
     counts_births_df["born_normalized"], counts_births_df["births_density"]
 )
-
-# %%
