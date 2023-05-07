@@ -7,7 +7,9 @@ import scipy
 
 # %%
 olympic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_id")
-results_df = pd.read_csv("Datasets/Olympic_Athlete_Event_Results.csv", index_col="athlete_id")
+results_df = pd.read_csv(
+    "Datasets/Olympic_Athlete_Event_Results.csv", index_col="athlete_id"
+)
 births_df = pd.read_csv("Datasets/US_births_1994-2014.csv")
 
 
@@ -39,13 +41,26 @@ def clean_data(df):
     clean_1994_df = clean_df[mask]
 
     # drop all the columns that we don't care about and count the number of times each athlete has played each sport
-    reduced_results_df = results_df.groupby(["athlete_id", "sport"]).size().reset_index(name='count')
+    reduced_results_df = (
+        results_df.groupby(["athlete_id", "sport"]).size().reset_index(name="count")
+    )
     # select the sport for each athlete that they have played the most times:
-    idx = reduced_results_df.groupby(["athlete_id"])['count'].idxmax()
+    idx = reduced_results_df.groupby(["athlete_id"])["count"].idxmax()
     reduced_results_df = reduced_results_df.loc[idx]
-    clean_1994_df = pd.merge(clean_1994_df, reduced_results_df[["athlete_id", "sport"]], on="athlete_id", how="inner")  
+    clean_1994_df = pd.merge(
+        clean_1994_df,
+        reduced_results_df[["athlete_id", "sport"]],
+        on="athlete_id",
+        how="inner",
+    )
 
     return clean_1994_df
+
+
+# %%
+def split_by_sport(df, sport):
+    sport_df = df[df["sport"].str.contains(sport, case=False)]
+    return sport_df
 
 
 # %%
@@ -98,7 +113,7 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
     counts_df = clean_1994_df.groupby(["yyyy-mm-dd"])["born"].count().reset_index()
 
     # Compute normalized the athlete born data based on the corresponding yearly sum
-    counts_df["year"] = pd.to_datetime(counts_df["yyyy-mm-dd"].dt.year)
+    counts_df["year"] = pd.to_datetime(counts_df["yyyy-mm-dd"]).dt.year
     yearly_sum = counts_df.groupby("year")["born"].sum()
     counts_df["born_normalized"] = counts_df["born"] / counts_df["year"].map(yearly_sum)
 
@@ -159,8 +174,16 @@ def remove_outliers(df):
 def create_graphs(df):
     averages = df
     # Create a line plot with "days_since_sep1" as the x variable and "born_normalized_mean" as one line and "births_density_mean" as another line
-    plt.plot(averages["days_since_sep1"], averages["born_normalized_mean"], label="Professional Athletes")
-    plt.plot(averages["days_since_sep1"], averages["births_density_mean"], label="Total Population")
+    plt.plot(
+        averages["days_since_sep1"],
+        averages["born_normalized_mean"],
+        label="Professional Athletes",
+    )
+    plt.plot(
+        averages["days_since_sep1"],
+        averages["births_density_mean"],
+        label="Total Population",
+    )
 
     # Add axis labels and a legend
     plt.xlabel("Days Since September 1")
@@ -174,8 +197,16 @@ def create_graphs(df):
     averages_30 = averages.groupby(averages["days_since_sep1"] // 30 * 30).mean()
 
     # Create a line plot with "days_since_sep1_30" as the x variable and "born_normalized_mean" as one line and "births_density_mean" as another line
-    plt.plot(averages_30["days_since_sep1"], averages_30["born_normalized_mean"], label="Professional Athletes")
-    plt.plot(averages_30["days_since_sep1"], averages_30["births_density_mean"], label="Total Population")
+    plt.plot(
+        averages_30["days_since_sep1"],
+        averages_30["born_normalized_mean"],
+        label="Professional Athletes",
+    )
+    plt.plot(
+        averages_30["days_since_sep1"],
+        averages_30["births_density_mean"],
+        label="Total Population",
+    )
 
     # Add axis labels and a legend
     plt.xlabel("Days Since September 1 (30 Day Intervals)")
@@ -186,12 +217,57 @@ def create_graphs(df):
     plt.show()
 
 
+def create_graph_sport(df, sport):
+    averages = df
+    # Group the rows into sets of 30 based on 'days_since_sep1' and calculate the mean of the remaining columns in each group
+    averages_30 = averages.groupby(averages["days_since_sep1"] // 30 * 30).mean()
+
+    # Create a line plot with "days_since_sep1_30" as the x variable and "born_normalized_mean" as one line and "births_density_mean" as another line
+    plt.plot(
+        averages_30["days_since_sep1"],
+        averages_30["born_normalized_mean"],
+        label="Professional Athletes",
+    )
+    plt.plot(
+        averages_30["days_since_sep1"],
+        averages_30["births_density_mean"],
+        label="Total Population",
+    )
+
+    # Add axis labels and a legend
+    plt.xlabel("Days Since September 1 (30 Day Intervals)")
+    plt.ylabel("Percentage of Population Born")
+    plt.legend()
+
+    # set the title
+    plt.title(sport)
+
+    # Show the plot
+    plt.show()
+
+
 # %%
 clean_df = clean_data(olympic_df)
 counts_births_df = join_athlete_and_birth_data(clean_df, births_df)
 averages_df = create_distribution(counts_births_df)
 create_graphs(averages_df)
-
+# %%
+skill_based_sports = ["curling", "table tennis", "golf", "equestrian", "shooting"]
+athletic_based_sports = ["swimming", "water polo", "gymnastics", "speed skating"]
+# %%
+for sport in skill_based_sports:
+    sport_df = split_by_sport(clean_df, sport)
+    sport_birth_df = join_athlete_and_birth_data(sport_df, births_df)
+    sport_averages_df = create_distribution(sport_birth_df)
+    create_graph_sport(sport_averages_df, sport)
+    print(sport_df.shape[0])
+# %%
+for sport in athletic_based_sports:
+    sport_df = split_by_sport(clean_df, sport)
+    sport_birth_df = join_athlete_and_birth_data(sport_df, births_df)
+    sport_averages_df = create_distribution(sport_birth_df)
+    create_graph_sport(sport_averages_df, sport)
+    print(sport_df.shape[0])
 # %%
 scipy.stats.kstest(
     counts_births_df["born_normalized"], counts_births_df["births_density"]
