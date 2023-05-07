@@ -27,7 +27,7 @@ def clean_data(df):
     # create a new dataframe that contains only the entries that are older than September 1st 1994 (This is where our birth data begins)
 
     # # convert the born column into a datetime object
-    clean_df["born"] = pd.to_datetime(clean_df["born"])
+    clean_df.loc[:, "born"] = pd.to_datetime(clean_df["born"])
 
     # # create a datetime object for September 1st, 1994
     sep_1_1994 = datetime(1994, 9, 1)
