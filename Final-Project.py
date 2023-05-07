@@ -74,7 +74,7 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
 
     # Drop data from the births dataframe that is past 2006. At this point we no longer have good data for athletes
     # convert yyyy-mm-dd to a datetime object
-    births_df["yyyy-mm-dd"] = pd.to_datetime(df["yyyy-mm-dd"])
+    births_df["yyyy-mm-dd"] = pd.to_datetime(births_df["yyyy-mm-dd"])
 
     # create a boolean mask for the rows where year is greater than 2006
     mask = births_df["yyyy-mm-dd"].dt.year > 2006
@@ -207,15 +207,15 @@ def create_graphs(df):
     # Show the plot
     plt.show()
 
-    return averages_df
-
-
 # %%
 clean_df = clean_data(olympic_df)
 counts_births_df = join_athlete_and_birth_data(clean_df, births_df)
 averages_df = create_distribution(counts_births_df)
-averages_df = create_graphs(averages_df)
+create_graphs(averages_df)
+
 # %%
 scipy.stats.kstest(
     counts_births_df["born_normalized"], counts_births_df["births_density"]
 )
+
+# %%
