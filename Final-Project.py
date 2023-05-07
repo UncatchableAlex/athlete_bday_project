@@ -70,8 +70,6 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
         + "-"
         + births_df["date_of_month"].astype(str).str.zfill(2)
     )
-    births_df["yyyy-mm-dd"] = pd.to_datetime(births_df["yyyy-mm-dd"])
-
     # Drop data from the births dataframe that is past 2006. At this point we no longer have good data for athletes
     # convert yyyy-mm-dd to a datetime object
     births_df["yyyy-mm-dd"] = pd.to_datetime(births_df["yyyy-mm-dd"])
@@ -151,32 +149,10 @@ def remove_outliers(df):
 
 
 def create_graphs(df):
-    averages_df = df
-    # Set the 'days_since_sep1' column as the index of the dataframe
-    averages_df.set_index("days_since_sep1", inplace=True)
-    # Reset the index to make 'days_since_sep1' a column again
-    averages_df.reset_index(inplace=True)
-
-    # Group the rows into sets of 30 based on 'days_since_sep1' and calculate the mean of the remaining columns in each group
-    averages_df = averages_df.groupby(averages_df.index // 30 * 30).mean()
-
-    # Reset the index to make the index a column again
-    averages_df.reset_index(inplace=True)
-
-    # Rename the new column to 'days_since_sep1_30'
-    averages_df.rename(columns={"index": "days_since_sep1_30"}, inplace=True)
-
-    # Create a line plot with "days_since_sep1" as the x variable and "born_normalized_mean" and "births_density_mean" as two separate lines
-    plt.plot(
-        averages_df["days_since_sep1"],
-        averages_df["born_normalized_mean"],
-        label="Professional Athletes",
-    )
-    plt.plot(
-        averages_df["days_since_sep1"],
-        averages_df["births_density_mean"],
-        label="Total Population",
-    )
+    averages = df
+    # Create a line plot with "days_since_sep1" as the x variable and "born_normalized_mean" as one line and "births_density_mean" as another line
+    plt.plot(averages["days_since_sep1"], averages["born_normalized_mean"], label="Professional Athletes")
+    plt.plot(averages["days_since_sep1"], averages["births_density_mean"], label="Total Population")
 
     # Add axis labels and a legend
     plt.xlabel("Days Since September 1")
@@ -186,17 +162,12 @@ def create_graphs(df):
     # Show the plot
     plt.show()
 
-    # Create a line plot with "days_since_sep1_30" as the x variable and "born_normalized_mean" and "births_density_mean" as two separate lines
-    plt.plot(
-        averages_df["days_since_sep1_30"],
-        averages_df["born_normalized_mean"],
-        label="Professional Athletes",
-    )
-    plt.plot(
-        averages_df["days_since_sep1_30"],
-        averages_df["births_density_mean"],
-        label="Total Population",
-    )
+    # Group the rows into sets of 30 based on 'days_since_sep1' and calculate the mean of the remaining columns in each group
+    averages_30 = averages.groupby(averages["days_since_sep1"] // 30 * 30).mean()
+
+    # Create a line plot with "days_since_sep1_30" as the x variable and "born_normalized_mean" as one line and "births_density_mean" as another line
+    plt.plot(averages_30["days_since_sep1"], averages_30["born_normalized_mean"], label="Professional Athletes")
+    plt.plot(averages_30["days_since_sep1"], averages_30["births_density_mean"], label="Total Population")
 
     # Add axis labels and a legend
     plt.xlabel("Days Since September 1 (30 Day Intervals)")
