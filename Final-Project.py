@@ -43,7 +43,7 @@ def clean_data(df):
     # select the sport for each athlete that they have played the most times:
     idx = reduced_results_df.groupby(["athlete_id"])['count'].idxmax()
     reduced_results_df = reduced_results_df.loc[idx]
-    clean_1994_df = pd.merge(clean_1994_df, reduced_results_df["athelete_id", "sport"], on="athlete_id", how="inner")  
+    clean_1994_df = pd.merge(clean_1994_df, reduced_results_df[["athlete_id", "sport"]], on="athlete_id", how="inner")  
 
     return clean_1994_df
 
