@@ -8,14 +8,15 @@ import scipy
 # %%
 olympic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_id")
 births_df = pd.read_csv("Datasets/US_births_1994-2014.csv")
-#%%
+
+
+# %%
 def clean_data(df):
     """
     This function takes in our dataset and returns a dataframe that contains athletes whose birthdates are known and have been born since Sept 1st 1994
     """
     # # define a regular expression pattern to match 'yyyy-mm-dd'
-    regex_pattern = "\d{4}-\d{2}-\d{2}"\
-    
+    regex_pattern = "\d{4}-\d{2}-\d{2}"
     # # create a boolean mask to select rows where 'born' matches the pattern
     mask = df["born"].apply(lambda x: bool(re.match(regex_pattern, x)))
 
@@ -37,6 +38,8 @@ def clean_data(df):
     clean_1994_df = clean_df[mask]
 
     return clean_1994_df
+
+
 # %%
 def days_since_sep1(date):
     born_date = date
@@ -46,7 +49,9 @@ def days_since_sep1(date):
         sep1_date = datetime(born_date.year - 1, 9, 1)
         delta = born_date - sep1_date
     return delta.days
-#%%
+
+
+# %%
 def join_athlete_and_birth_data(clean_1994_df, births_df):
     """
     This function takes in the clean_1994_df and births_df and returns a combined dataframe that contains the distributions that can then be graphed
@@ -67,6 +72,16 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
     )
     births_df["yyyy-mm-dd"] = pd.to_datetime(births_df["yyyy-mm-dd"])
 
+    # Drop data from the births dataframe that is past 2006. At this point we no longer have good data for athletes
+    # convert yyyy-mm-dd to a datetime object
+    births_df["yyyy-mm-dd"] = pd.to_datetime(df["yyyy-mm-dd"])
+
+    # create a boolean mask for the rows where year is greater than 2006
+    mask = births_df["yyyy-mm-dd"].dt.year > 2006
+
+    # use boolean indexing to drop the rows where year is greater than 2006
+    births_df = births_df.loc[~mask]
+
     # Calculate the days_since_sep1 for each athlete
     clean_1994_df["days_since_sep1"] = clean_1994_df["born"].apply(days_since_sep1)
     clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
@@ -83,10 +98,14 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
     counts_df["born_normalized"] = counts_df["born"] / counts_df["year"].map(yearly_sum)
 
     # Join the counts_df and the births_df to create the
-    counts_births_df = pd.merge(counts_df, births_df, on="yyyy-mm-dd", how="inner")
+    counts_births_df = pd.merge(births_df, counts_df, on="yyyy-mm-dd", how="left")
+    counts_births_df["born"] = counts_births_df["born"].fillna(0)
+    counts_births_df["born_normalized"] = counts_births_df["born_normalized"].fillna(0)
 
     return counts_births_df
-#%%
+
+
+# %%
 def create_distribution(counts_births_df):
     # Create an empty DataFrame to store the averages
     averages_df = pd.DataFrame(
@@ -112,6 +131,7 @@ def create_distribution(counts_births_df):
 
     return averages_df
 
+
 # %%
 def remove_outliers(df):
     q1 = df["born_normalized_mean"].quantile(0.25)
@@ -130,10 +150,11 @@ def remove_outliers(df):
     ]
     return df
 
+
 def create_graphs(df):
     averages_df = df
     # Set the 'days_since_sep1' column as the index of the dataframe
-    averages_df.set_index('days_since_sep1', inplace=True)
+    averages_df.set_index("days_since_sep1", inplace=True)
     # Reset the index to make 'days_since_sep1' a column again
     averages_df.reset_index(inplace=True)
 
@@ -144,7 +165,7 @@ def create_graphs(df):
     averages_df.reset_index(inplace=True)
 
     # Rename the new column to 'days_since_sep1_30'
-    averages_df.rename(columns={'index': 'days_since_sep1_30'}, inplace=True)
+    averages_df.rename(columns={"index": "days_since_sep1_30"}, inplace=True)
 
     # Create a line plot with "days_since_sep1" as the x variable and "born_normalized_mean" and "births_density_mean" as two separate lines
     plt.plot(
@@ -185,14 +206,16 @@ def create_graphs(df):
 
     # Show the plot
     plt.show()
-#%%
+
+    return averages_df
+
+
+# %%
 clean_df = clean_data(olympic_df)
-counts_births_df = join_athlete_and_birth_data(clean_df,births_df)
+counts_births_df = join_athlete_and_birth_data(clean_df, births_df)
 averages_df = create_distribution(counts_births_df)
-create_graphs(averages_df)
+averages_df = create_graphs(averages_df)
 # %%
 scipy.stats.kstest(
     counts_births_df["born_normalized"], counts_births_df["births_density"]
 )
-#
-
