@@ -7,6 +7,7 @@ import scipy
 
 # %%
 olympic_df = pd.read_csv("Datasets/Olympic_Athlete_Bio.csv", index_col="athlete_id")
+results_df = pd.read_csv("Datasets/Olympic_Athlete_Event_Results.csv", index_col="athlete_id")
 births_df = pd.read_csv("Datasets/US_births_1994-2014.csv")
 
 
@@ -26,7 +27,7 @@ def clean_data(df):
     # create a new dataframe that contains only the entries that are older than September 1st 1994 (This is where our birth data begins)
 
     # # convert the born column into a datetime object
-    clean_df.loc[:, "born"] = pd.to_datetime(clean_df["born"])
+    clean_df["born"] = pd.to_datetime(clean_df["born"])
 
     # # create a datetime object for September 1st, 1994
     sep_1_1994 = datetime(1994, 9, 1)
@@ -36,6 +37,13 @@ def clean_data(df):
 
     # # create a new DataFrame with only the rows where the birth date is before September 1st, 1994
     clean_1994_df = clean_df[mask]
+
+    # drop all the columns that we don't care about and count the number of times each athlete has played each sport
+    reduced_results_df = results_df.groupby(["athlete_id", "sport"]).size().reset_index(name='count')
+    # select the sport for each athlete that they have played the most times:
+    idx = reduced_results_df.groupby(["athlete_id"])['count'].idxmax()
+    reduced_results_df = reduced_results_df.loc[idx]
+    clean_1994_df = pd.merge(clean_1994_df, reduced_results_df["athelete_id", "sport"], on="athlete_id", how="inner")  
 
     return clean_1994_df
 
