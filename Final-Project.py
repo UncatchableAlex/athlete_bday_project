@@ -82,23 +82,26 @@ def join_athlete_and_birth_data(clean_1994_df, births_df):
     # use boolean indexing to drop the rows where year is greater than 2006
     births_df = births_df.loc[~mask]
 
-    # Calculate the days_since_sep1 for each athlete
-    clean_1994_df["days_since_sep1"] = clean_1994_df["born"].apply(days_since_sep1)
+    # Calculate the days_since_sep1 for each date
+    births_df["days_since_sep1"] = births_df["yyyy-mm-dd"].apply(days_since_sep1)
+
+    # Add a "yyyy-mm-dd" column to the athletes table
     clean_1994_df["yyyy-mm-dd"] = clean_1994_df["born"]
 
     # group the entries by birth date and days since September 1st and count the number of entries in each group
     counts_df = (
-        clean_1994_df.groupby(["yyyy-mm-dd", "days_since_sep1"])["born"]
+        clean_1994_df.groupby(["yyyy-mm-dd"])["born"]
         .count()
         .reset_index()
     )
+    
     # Compute normalized the athlete born data based on the corresponding yearly sum
     counts_df["year"] = pd.to_datetime(counts_df["yyyy-mm-dd"].dt.year)
     yearly_sum = counts_df.groupby("year")["born"].sum()
     counts_df["born_normalized"] = counts_df["born"] / counts_df["year"].map(yearly_sum)
 
     # Join the counts_df and the births_df to create the
-    counts_births_df = pd.merge(births_df, counts_df, on="yyyy-mm-dd", how="left")
+    counts_births_df = pd.merge(births_df, counts_df, on="yyyy-mm-dd", how="left")  
     counts_births_df["born"] = counts_births_df["born"].fillna(0)
     counts_births_df["born_normalized"] = counts_births_df["born_normalized"].fillna(0)
 
